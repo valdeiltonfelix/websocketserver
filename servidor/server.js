@@ -1,11 +1,12 @@
 const { WebSocketServer } = require('ws');
-const dotenv = require('dotenv');
+const dotenv = require('dotenv').config({ path: '../.env' });
 
-dotenv.config();
+const Client =require('./db/conection');
 
-const wss = new WebSocketServer({ port: process.env.PORT  
+const wss = new WebSocketServer({ port: process.env.PORT
  || 8085 });
 
+const cldb=Client.Client();
 var activeUsers = [];
 var users = [];
 var clients = [];
@@ -19,9 +20,25 @@ wss.on('connection', (ws) => {
 	 const d = JSON.parse(data);
 	  console.log(d);
     	if(d.type=='logout'){
-             users.push(d);
+             users.push(d)
+             const login=d.data.user;
+             const id_sessao=d.data.id
+         
+              cldb.query(`select * from logado 
+              inner join users on id_login=users.id where login='${login}' 
+              and id_sessao='${id_sessao}' `, (error, re) => {
+
+               if(re.rows!=undefined){
+                   cldb.query(`update logado set logado='f' 
+                    where id_login=${re.rows[0].id_login} and
+                     id_sessao='${re.rows[0].id_sessao}'`);
+               }
+             
+             })
+      
              users = removeLoggedOutUsers(users);
              logautUserList(users)
+
          }else if(d.type=='chat'){
 
 	         wss.clients.forEach(function(client) {
